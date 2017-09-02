@@ -8,9 +8,11 @@ import {
   SortableElement as sortableElement,
 } from 'react-sortable-hoc';
 
+import { swap } from 'xod-func-tools';
+
 import * as Actions from '../actions';
 import * as ProjectSelectors from '../../project/selectors';
-import { swap, assocIndexes, indexById } from '../../utils/array';
+import { assocIndexes, indexById } from '../../utils/array';
 import TabsContainer from '../components/TabsContainer';
 import TabsItem from '../components/TabsItem';
 
@@ -64,11 +66,13 @@ class Tabs extends React.Component {
   }
 
   onSwitchPatch(patchPath) {
-    return this.props.actions.switchPatch(patchPath);
+    // a little hack to correctly handle onBlur etc events
+    setTimeout(() => this.props.actions.switchPatch(patchPath), 0);
   }
 
   onCloseTab(patchPath) {
-    return this.props.actions.closeTab(patchPath);
+    // a little hack to correctly handle onBlur etc events, same as in onSwitchPatch
+    setTimeout(() => this.props.actions.closeTab(patchPath), 0);
   }
 
   onSortEnd(changes) {

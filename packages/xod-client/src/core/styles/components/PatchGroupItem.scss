@@ -1,16 +1,17 @@
 .PatchGroupItem {
   color: $sidebar-color-text;
   background-color: $sidebar-color-bg;
-  padding: 8px;
-  padding-left: 30px;
   user-select: none;
   position: relative;
   cursor: pointer;
 
   &__label {
+    padding: 8px;
+    padding-left: 30px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    outline: none;
   }
 
   &.isOpen &__label {
@@ -45,13 +46,13 @@
   }
 
   &.isSelected {
-    background-color: #616077;
+    background-color: $sidebar-color-bg-selected;
 
     .PatchGroupItem__hover-buttons {
       display: block;
-      background: transparent;
+      background: $sidebar-color-bg-selected;
       &:before {
-        background: transparent;
+        background: linear-gradient(to left, $sidebar-color-bg-selected, rgba(0, 0, 0, 0));
       }
     }
   }
@@ -62,6 +63,10 @@
 
     .PatchGroupItem__hover-buttons {
       display: block;
+      background-color: $sidebar-color-bg-hover;
+      &:before {
+        background: linear-gradient(to left, $sidebar-color-bg-hover, rgba(0, 0, 0, 0));
+      }
     }
   }
 

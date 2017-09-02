@@ -42,6 +42,66 @@
 #  define pgm_read_ptr(addr) (*(const void **)(addr))
 #endif
 
+//----------------------------------------------------------------------------
+// Compatibilities
+//----------------------------------------------------------------------------
+
+#if !defined(ARDUINO_ARCH_AVR)
+/*
+ * Provide dtostrf function for non-AVR platforms. Although many platforms
+ * provide a stub many others do not. And the stub is based on `sprintf`
+ * which doesn’t work with floating point formatters on some platforms
+ * (e.g. Arduino M0).
+ *
+ * This is an implementation based on `fcvt` standard function. Taken here:
+ * https://forum.arduino.cc/index.php?topic=368720.msg2542614#msg2542614
+ */
+char *dtostrf(double val, int width, unsigned int prec, char *sout) {
+    int decpt, sign, reqd, pad;
+    const char *s, *e;
+    char *p;
+    s = fcvt(val, prec, &decpt, &sign);
+    if (prec == 0 && decpt == 0) {
+        s = (*s < '5') ? "0" : "1";
+        reqd = 1;
+    } else {
+        reqd = strlen(s);
+        if (reqd > decpt) reqd++;
+        if (decpt == 0) reqd++;
+    }
+    if (sign) reqd++;
+    p = sout;
+    e = p + reqd;
+    pad = width - reqd;
+    if (pad > 0) {
+        e += pad;
+        while (pad-- > 0) *p++ = ' ';
+    }
+    if (sign) *p++ = '-';
+    if (decpt <= 0 && prec > 0) {
+        *p++ = '0';
+        *p++ = '.';
+        e++;
+        while ( decpt < 0 ) {
+            decpt++;
+            *p++ = '0';
+        }
+    }
+    while (p < e) {
+        *p++ = *s++;
+        if (p == e) break;
+        if (--decpt == 0) *p++ = '.';
+    }
+    if (width < 0) {
+        pad = (reqd + width) * -1;
+        while (pad-- > 0) *p++ = ' ';
+    }
+    *p = 0;
+    return sout;
+}
+#endif
+
+
 namespace xod {
 //----------------------------------------------------------------------------
 // Type definitions
@@ -141,18 +201,17 @@ extern void* const g_storages[NODE_COUNT];
 extern const void* const g_wiring[NODE_COUNT];
 extern DirtyFlags g_dirtyFlags[NODE_COUNT];
 
-// TODO: get rid of an extra indirection layer completely
-// would save 2 bytes per node
-extern NodeId g_topology[NODE_COUNT];
-
 // TODO: replace with a compact list
 extern TimeMs g_schedule[NODE_COUNT];
 
 void clearTimeout(NodeId nid);
+bool isTimedOut(NodeId nid);
 
 //----------------------------------------------------------------------------
 // Engine (private API)
 //----------------------------------------------------------------------------
+
+TimeMs g_transactionTime;
 
 void* getStoragePtr(NodeId nid, size_t offset) {
     return (uint8_t*)pgm_read_ptr(&g_storages[nid]) + offset;
@@ -218,6 +277,39 @@ T getInputValueImpl(NodeId nid, size_t wiringOffset) {
 }
 
 template<typename T>
+struct always_false {
+    enum { value = 0 };
+};
+
+// GetValue -- classical trick for partial function (API `xod::getValue`)
+// template specialization
+template<typename InputOutputT>
+struct GetValue {
+    static typename InputOutputT::ValueT getValue(Context ctx) {
+        static_assert(
+                always_false<InputOutputT>::value,
+                "You should provide an input_XXX or output_YYY argument " \
+                "in angle brackets of getValue"
+                );
+
+    }
+};
+
+template<typename ValueT, size_t wiringOffset>
+struct GetValue<InputDescriptor<ValueT, wiringOffset>> {
+    static ValueT getValue(Context ctx) {
+        return getInputValueImpl<ValueT>(ctx, wiringOffset);
+    }
+};
+
+template<typename ValueT, size_t wiringOffset, size_t storageOffset, uint8_t index>
+struct GetValue<OutputDescriptor<ValueT, wiringOffset, storageOffset, index>> {
+    static ValueT getValue(Context ctx) {
+        return getOutputValueImpl<ValueT>(ctx, storageOffset);
+    }
+};
+
+template<typename T>
 void emitValueImpl(
         NodeId nid,
         size_t storageOffset,
@@ -249,27 +341,37 @@ void evaluateNode(NodeId nid) {
 }
 
 void runTransaction() {
+    g_transactionTime = millis();
+
     XOD_TRACE_F("Transaction started, t=");
-    XOD_TRACE_LN(millis());
-    for (NodeId nid : g_topology) {
-        if (isNodeDirty(nid))
+    XOD_TRACE_LN(g_transactionTime);
+
+    for (NodeId nid = 0; nid < NODE_COUNT; ++nid) {
+        if (isNodeDirty(nid)) {
             evaluateNode(nid);
+
+            // If the schedule is stale, clear timeout so that
+            // the node would not be marked dirty again in idle
+            if (isTimedOut(nid))
+                clearTimeout(nid);
+        }
     }
 
+    // Clear dirtieness for all nodes and pins
     memset(g_dirtyFlags, 0, sizeof(g_dirtyFlags));
+
     XOD_TRACE_F("Transaction completed, t=");
     XOD_TRACE_LN(millis());
 }
 
 void idle() {
+    // Mark timed out nodes dirty. Do not reset schedule here to give
+    // a chance for a node to get a reasonable result from `isTimedOut`
     TimeMs now = millis();
     for (NodeId nid = 0; nid < NODE_COUNT; ++nid) {
         TimeMs t = g_schedule[nid];
-        if (t && t <= now) {
+        if (t && t < now)
             markNodeDirty(nid);
-            clearTimeout(nid);
-            return;
-        }
     }
 }
 
@@ -277,9 +379,9 @@ void idle() {
 // Public API (can be used by native nodes’ `evaluate` functions)
 //----------------------------------------------------------------------------
 
-template<typename InputT>
-typename InputT::ValueT getValue(NodeId nid) {
-    return getInputValueImpl<typename InputT::ValueT>(nid, InputT::WIRING_OFFSET);
+template<typename InputOutputT>
+typename InputOutputT::ValueT getValue(Context ctx) {
+    return GetValue<InputOutputT>::getValue(ctx);
 }
 
 template<typename OutputT>
@@ -293,7 +395,7 @@ void emitValue(NodeId nid, typename OutputT::ValueT value) {
 }
 
 TimeMs transactionTime() {
-    return millis();
+    return g_transactionTime;
 }
 
 void setTimeout(NodeId nid, TimeMs timeout) {
@@ -302,6 +404,10 @@ void setTimeout(NodeId nid, TimeMs timeout) {
 
 void clearTimeout(NodeId nid) {
     g_schedule[nid] = 0;
+}
+
+bool isTimedOut(NodeId nid) {
+    return g_schedule[nid] < transactionTime();
 }
 
 } // namespace xod

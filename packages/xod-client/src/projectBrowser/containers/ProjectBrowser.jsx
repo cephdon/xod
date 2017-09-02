@@ -64,10 +64,9 @@ class ProjectBrowser extends React.Component {
   }
 
   onAddNode(patchPath) {
-    // TODO: rewrite this when implementing "zombie" nodes
     this.props.actions.addNode(
       patchPath,
-      { x: 50, y: 50 },
+      this.props.defaultNodePosition,
       this.props.currentPatchPath
     );
   }
@@ -105,12 +104,14 @@ class ProjectBrowser extends React.Component {
       <Icon
         key="delete"
         name="trash"
+        title="Delete patch"
         className="hover-button"
         onClick={() => requestDelete(patchPath)}
       />,
       <Icon
         key="rename"
         name="pencil"
+        title="Rename patch"
         className="hover-button"
         onClick={() => requestRename(patchPath)}
       />,
@@ -152,6 +153,7 @@ class ProjectBrowser extends React.Component {
       <Icon
         key="add"
         name="plus-circle"
+        title="Add node"
         className={classNames}
         onClick={action}
       />
@@ -166,6 +168,7 @@ class ProjectBrowser extends React.Component {
         rel="noopener noreferrer"
         className="hover-button"
         key="patch-guide-button"
+        title="Open documentation in web browser"
       >
         <IconGuide
           className="project-browser--guide-button"
@@ -298,6 +301,7 @@ ProjectBrowser.propTypes = {
   localPatches: sanctuaryPropType($.Array(Patch)),
   popups: PropTypes.object.isRequired,
   libs: sanctuaryPropType($.StrMap($.Array(Patch))),
+  defaultNodePosition: PropTypes.object.isRequired,
   actions: PropTypes.shape({
     addNode: PropTypes.func.isRequired,
     switchPatch: PropTypes.func.isRequired,
@@ -322,6 +326,7 @@ const mapStateToProps = R.applySpec({
   localPatches: ProjectBrowserSelectors.getLocalPatches,
   popups: PopupSelectors.getProjectBrowserPopups,
   libs: ProjectBrowserSelectors.getLibs,
+  defaultNodePosition: EditorSelectors.getDefaultNodePlacePosition,
 });
 
 const mapDispatchToProps = dispatch => ({

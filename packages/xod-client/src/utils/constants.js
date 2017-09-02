@@ -7,6 +7,8 @@ export const COMMAND = {
   OPEN_PROJECT: 'openProject',
   RENAME_PROJECT: 'renameProject',
 
+  TOGGLE_HELPBAR: 'toggleHelpbar',
+
   ADD_PATCH: 'addPatch',
   RENAME: 'rename',
   DELETE: 'delete',
@@ -19,6 +21,8 @@ export const COMMAND = {
   PASTE: 'paste',
 
   SAVE_PROJECT: 'saveProject',
+
+  INSERT_NODE: 'insertNode',
 };
 
 export const HOTKEY = {
@@ -36,6 +40,9 @@ export const HOTKEY = {
   [COMMAND.DELETE]: ['ctrl+del', 'ctrl+backspace'],
 
   [COMMAND.SAVE_PROJECT]: ['ctrl+s'],
+
+  [COMMAND.TOGGLE_HELPBAR]: ['h'],
+  [COMMAND.INSERT_NODE]: ['i'],
 };
 
 export const ELECTRON_ACCELERATOR = {

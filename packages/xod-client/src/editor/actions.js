@@ -172,8 +172,6 @@ export const switchPatch = patchPath => (dispatch, getState) => {
 
   if (currentPatchPath === patchPath) { return; }
 
-  dispatch(deselectAll());
-
   const tabs = Selectors.getTabs(state);
   const isOpeningNewTab = !R.has(patchPath, tabs);
   dispatch({
@@ -201,4 +199,29 @@ export const closeTab = id => ({
 export const sortTabs = newOrderObject => ({
   type: ActionType.TAB_SORT,
   payload: newOrderObject,
+});
+
+export const toggleHelpbar = () => ({
+  type: ActionType.TOGGLE_HELPBAR,
+});
+
+export const setFocusedArea = area => ({
+  type: ActionType.SET_FOCUSED_AREA,
+  payload: area,
+});
+
+export const showSuggester = placePosition => ({
+  type: ActionType.SHOW_SUGGESTER,
+  payload: placePosition,
+});
+
+export const hideSuggester = () => ({
+  type: ActionType.HIDE_SUGGESTER,
+});
+
+export const highlightSugessterItem = patchPath => ({
+  type: ActionType.HIGHLIGHT_SUGGESTER_ITEM,
+  payload: {
+    patchPath,
+  },
 });

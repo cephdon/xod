@@ -173,6 +173,7 @@ class App extends client.App {
           onClick(items.undo, this.props.actions.undoCurrentPatch),
           onClick(items.redo, this.props.actions.redoCurrentPatch),
           items.separator,
+          onClick(items.insertNode, () => this.props.actions.showSuggester(null)),
           onClick(items.insertComment, this.props.actions.addComment),
           items.separator,
           onClick(items.projectPreferences, this.props.actions.showProjectPreferences),
@@ -183,6 +184,12 @@ class App extends client.App {
         [
           onClick(items.showCodeForArduino, this.onShowCodeArduino),
           onClick(items.uploadToArduino, this.onUpload),
+        ]
+      ),
+      submenu(
+        items.view,
+        [
+          onClick(items.toggleHelpbar, this.props.actions.toggleHelpbar),
         ]
       ),
       submenu(

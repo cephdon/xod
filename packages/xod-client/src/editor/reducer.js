@@ -11,6 +11,11 @@ import {
   TAB_CLOSE,
   TAB_SORT,
   SET_CURRENT_PATCH_OFFSET,
+  TOGGLE_HELPBAR,
+  SET_FOCUSED_AREA,
+  SHOW_SUGGESTER,
+  HIDE_SUGGESTER,
+  HIGHLIGHT_SUGGESTER_ITEM,
 } from './actionTypes';
 import {
   PROJECT_CREATE,
@@ -77,9 +82,18 @@ const resetCurrentPatchPath = (reducer, state, payload) => {
   });
 };
 
+const clearSelection = R.flip(R.merge)({
+  selection: [],
+  linkingPin: null,
+});
+
 const openPatchByPath = (patchPath, state) => R.compose(
   R.assoc('currentPatchPath', patchPath),
-  R.unless(isPatchOpened(patchPath), addTab(patchPath))
+  clearSelection,
+  R.unless(
+    isPatchOpened(patchPath),
+    addTab(patchPath)
+  )
 )(state);
 
 const closeTabById = (tabId, state) =>
@@ -123,10 +137,7 @@ const editorReducer = (state = {}, action) => {
     case LINK_DELETE:
     case COMMENT_DELETE:
     case EDITOR_DESELECT_ALL:
-      return R.merge(state, {
-        selection: [],
-        linkingPin: null,
-      });
+      return clearSelection(state);
     case EDITOR_SELECT_ENTITY:
       return R.assoc(
         'selection',
@@ -210,6 +221,26 @@ const editorReducer = (state = {}, action) => {
         action.payload,
         state
       );
+    case TOGGLE_HELPBAR:
+      return R.over(R.lensProp('isHelpbarVisible'), R.not, state);
+    case SET_FOCUSED_AREA:
+      return R.assoc('focusedArea', action.payload, state);
+    case SHOW_SUGGESTER: {
+      if (R.path(['suggester', 'visible'], state) === true) return state;
+
+      return R.compose(
+        R.assocPath(['suggester', 'visible'], true),
+        R.assocPath(['suggester', 'placePosition'], action.payload)
+      )(state);
+    }
+    case HIDE_SUGGESTER:
+      return R.compose(
+        R.assocPath(['suggester', 'visible'], false),
+        R.assocPath(['suggester', 'highlightedPatchPath'], null),
+        R.assocPath(['suggester', 'placePosition'], null)
+      )(state);
+    case HIGHLIGHT_SUGGESTER_ITEM:
+      return R.assocPath(['suggester', 'highlightedPatchPath'], action.payload.patchPath, state);
     default:
       return state;
   }

@@ -88,6 +88,11 @@ const rawItems = {
     key: 'insertComment',
     label: 'Insert Comment',
   },
+  insertNode: {
+    key: 'insertNode',
+    label: 'Insert Node',
+    command: COMMAND.INSERT_NODE,
+  },
 
   deploy: {
     key: 'deploy',
@@ -100,6 +105,16 @@ const rawItems = {
   uploadToArduino: {
     key: 'uploadToArduino',
     label: 'Upload to Arduino',
+  },
+
+  view: {
+    key: 'view',
+    label: 'View',
+  },
+  toggleHelpbar: {
+    key: 'toggleHelpbar',
+    label: 'Toggle Helpbar',
+    command: COMMAND.TOGGLE_HELPBAR,
   },
 
   help: {
